@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    network_mode: host
+    environment:
+      TZ: ${TZ}
+      WEBPASSWORD: ${PASSWORD}
+      WEB_PORT: 81
+    volumes:
+      - './etc-pihole:/etc/pihole'
+      - './etc-dnsmasq.d:/etc/dnsmasq.d'    
+    cap_add:
+      - NET_ADMIN # Recommended but not required (DHCP needs NET_ADMIN)      
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pihole.rule=Host(`pihole.${DOMAIN}.${TLD}`)"
+      - "traefik.http.routers.pihole.middlewares=pihole-admin"
+      - "traefik.http.routers.pihole.entrypoints=https"
+      - "traefik.http.routers.pihole.tls=true"
+      - "traefik.http.routers.pihole.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pihole.loadbalancer.server.port=81"
+      - "traefik.http.middlewares.pihole-admin.addprefix.prefix=/admin"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"
