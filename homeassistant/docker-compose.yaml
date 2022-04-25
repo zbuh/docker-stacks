@@ -1,0 +1,131 @@
+version: '3'
+
+services:
+  # HomeAssistant
+  homeassistant:
+    container_name: homeassistant
+    image: homeassistant/home-assistant:latest
+    volumes:
+      - ./data/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    environment:
+     - TZ=${TZ}
+    depends_on:
+      - mariadb 
+      - zigbee2mqtt
+      - mqtt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homeassistant.rule=Host(`hass.${DOMAIN}.${TLD}`)"
+      - "traefik.http.routers.homeassistant.entrypoints=https"
+      - "traefik.http.routers.homeassistant.tls=true"
+      - "traefik.http.routers.homeassistant.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+      - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # MariaDb
+  mariadb:
+    container_name: mariadb
+    image: mariadb:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: homeassistant
+      MYSQL_USER: homeassistant
+      MYSQL_PASSWORD: "${HA_MYSQL_PASSWORD}"
+    user: "${LOCAL_USER}:${LOCAL_USER}"
+    volumes:
+      # Local path where the database will be stored.
+      - ./data/mariadb:/var/lib/mysql
+
+  # eclipse-mosquitto (MQTT broker)
+  mqtt:
+    container_name: mqtt
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    network_mode: host
+    user: "${LOCAL_USER}:${LOCAL_USER}"
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+  # zigbee2mqtt
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=${TZ}
+    user: "${LOCAL_USER}:${LOCAL_USER}"
+    group_add:
+      - dialout
+    volumes:
+      - ./data/zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro 
+    devices:
+      - "${ZIGBEE_ADAPTER_TTY}:/dev/ttyUSB0"
+    privileged: true
+    depends_on:
+      - mqtt
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee2mqtt.${DOMAIN}.${TLD}`)"
+      - "traefik.http.routers.zigbee2mqtt.entrypoints=https"
+      - "traefik.http.routers.zigbee2mqtt.tls=true"
+      - "traefik.http.routers.zigbee2mqtt.tls.certresolver=letsencrypt"
+      - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8099"
+      - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # EspHome
+  esphome:
+    image: esphome/esphome
+    container_name: esphome
+    volumes:
+      - ./data/esphome:/config:rw
+      # Use local time for logging timestamps
+      - /etc/localtime:/etc/localtime:ro
+    network_mode: host
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.esphome.rule=Host(`esphome.${DOMAIN}.${TLD}`)"
+      - "traefik.http.routers.esphome.entrypoints=https"
+      - "traefik.http.routers.esphome.tls=true"
+      - "traefik.http.routers.esphome.tls.certresolver=letsencrypt"
+      - "traefik.http.services.esphome.loadbalancer.server.port=6052"
+      - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"    
+
+  # NodeRed
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered
+    environment:
+      - TZ=${TZ}
+    network_mode: host
+    volumes:
+      - ./data/nodered:/data
+    restart: unless-stopped
+    user: "${LOCAL_USER}:${LOCAL_USER}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nodered.rule=Host(`nodered.${DOMAIN}.${TLD}`)"
+      - "traefik.http.routers.nodered.entrypoints=https"
+      - "traefik.http.routers.nodered.tls=true"
+      - "traefik.http.routers.nodered.tls.certresolver=letsencrypt"
+      - "traefik.http.services.nodered.loadbalancer.server.port=1880"
+      - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"
