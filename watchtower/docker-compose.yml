@@ -1,0 +1,26 @@
+version: "3"
+
+networks:
+  proxy:
+    external: true
+
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    networks:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      #- WATCHTOWER_MONITOR_ONLY=true
+      #- WATCHTOWER_POLL_INTERVAL=30
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr 
+      - WATCHTOWER_NOTIFICATION_URL=telegram://${BOT_TOKEN}@telegram/?channels=${BOT_CHANNEL}
+
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
