@@ -1,0 +1,176 @@
+version: "3"
+
+networks:
+  proxy:
+    external: true
+
+services:
+
+  jellyfin:
+    container_name: jellyfin
+    image: lscr.io/linuxserver/jellyfin
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - 8096:8096
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - "${TVDIR}:/data/tvshows"
+      - "${MOVIESDIR}:/data/movies"
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    devices:
+      - /dev/dri:/dev/dri  
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)"
+      - "traefik.http.routers.jellyfin.entrypoints=https"
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"      
+
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - 8989:8989
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./sonarr:/config
+      - ${DLDIR}/completed:/downloads/completed
+      - ${TVDIR}:/tv
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - prowlarr
+      - transmission
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)"
+      - "traefik.http.routers.sonarr.entrypoints=https"
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.routers.sonarr.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"      
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - 7878:7878
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./radarr:/config
+      - ${DLDIR}/completed:/downloads/completed
+      - ${MOVIESDIR}:/movies
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - prowlarr
+      - transmission
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)"
+      - "traefik.http.routers.radarr.entrypoints=https"
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.routers.radarr.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"            
+
+  transmission:
+    image: linuxserver/transmission
+    container_name: transmission
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./transmission:/config
+      - ${DLDIR}:/downloads
+    networks:
+      - proxy
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.transmission.rule=Host(`transmission.${DOMAIN}`)"
+      - "traefik.http.routers.transmission.entrypoints=https"
+      - "traefik.http.routers.transmission.tls=true"
+      - "traefik.http.routers.transmission.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"            
+ 
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:develop
+    container_name: prowlarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./prowlarr:/config
+    networks:
+      - proxy      
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)"
+      - "traefik.http.routers.prowlarr.entrypoints=https"
+      - "traefik.http.routers.prowlarr.tls=true"
+      - "traefik.http.routers.prowlarr.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"            
+
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - UMASK_SET=022 #optional
+    volumes:
+      - ./bazarr:/config
+      - "${TVDIR}:/tv"
+      - "${MOVIESDIR}:/movies"
+    networks:
+      - proxy
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)"
+      - "traefik.http.routers.bazarr.entrypoints=https"
+      - "traefik.http.routers.bazarr.tls=true"
+      - "traefik.http.routers.bazarr.tls.certresolver=letsencrypt"
+      # Watchtower Update
+      - "com.centurylinklabs.watchtower.enable=true"            
