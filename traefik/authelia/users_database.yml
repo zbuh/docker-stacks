@@ -1,0 +1,14 @@
+---
+###############################################################
+#                         Users Database                      #
+###############################################################
+
+users:
+
+  user:
+    displayname: "User"
+    password: "XXXXXXXXXXXXXX"
+    email: user@example.com
+    groups:
+      - admins
+      - dev

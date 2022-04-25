@@ -1,0 +1,38 @@
+entryPoints:
+  http:
+    address: ":80"
+
+  https:
+    address: ":443"
+
+api:
+  dashboard: true
+
+providers:
+  docker:
+    endpoint: "tcp://socket-proxy:2375"
+    exposedByDefault: false
+
+  file:
+    directory: /rules
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: email@example.com
+      storage: ./letsencrypt/acme.json
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 10
+
+serversTransport:
+    insecureSkipVerify: true
+
+log:
+  level: DEBUG
+
+#accessLog:
+#  format: json
+#  fields:
+#    defaultMode: keep

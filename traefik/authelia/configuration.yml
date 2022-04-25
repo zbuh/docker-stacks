@@ -1,0 +1,69 @@
+---
+###############################################################
+#                   Authelia configuration                    #
+###############################################################
+
+jwt_secret: XXXXXXXXXXXXXXX
+default_redirection_url: https://authelia.example.com
+
+server:
+  host: 0.0.0.0
+  port: 9091
+
+log:
+  level: debug
+
+totp:
+  issuer: authelia.com
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+
+access_control:
+  default_policy: deny
+  rules:
+    # Allow free access from local network
+    - domain: "*"
+      networks:
+        - 192.168.168.0/24
+      policy: bypass
+
+    # Rules applied to everyone
+    - domain: hass.example.com
+      policy: bypass
+
+
+session:
+  name: authelia_session
+  # This secret can also be set using the env variables AUTHELIA_SESSION_SECRET_FILE
+  secret: XXXXXXXXXXX
+  expiration: 3600  # 1 hour
+  inactivity: 300  # 5 minutes
+  domain: example.com  # Should match whatever your root protected domain is
+
+  redis:
+    host: redis
+    port: 6379
+
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+storage:
+  encryption_key: YYYYYYYYYYYYYYYYYYYYY
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+#  filesystem:
+#    filename: /config/notification.txt
+  smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: "user@gmail.com"
+    password: password
+    sender: user@gmail.com
+    subject: "[Authentication] {title}"
+    disable_require_tls: false
