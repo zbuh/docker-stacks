@@ -1,0 +1,37 @@
+version: '3'
+
+networks:
+  proxy:
+    external: true
+
+services:
+
+  # Visual Studio code
+  vscode:
+   container_name: vscode
+   image: codercom/code-server:latest
+   restart: unless-stopped
+   environment:
+     PASSWORD: "${VSCODE_PASSWORD}"
+     DOCKER_USER: ${LOCAL_USER}
+   user: "${LOCAL_USER}:${LOCAL_USER}"
+   volumes:
+     - ../homeassistant/data/homeassistant:/home/coder/project
+     - ../:/docker
+     - ./data:/home/coder/.local/share/code-server
+   networks:
+     - proxy
+   ports:
+     - "8444:8444"
+   command: code-server --auth password --port 8444 --disable-telemetry /home/coder/project
+   labels:
+     - "traefik.enable=true"
+     - "traefik.http.routers.vscode.rule=Host(`code.home-martins.net`)"
+     - "traefik.http.routers.vscode.entrypoints=https"
+     - "traefik.http.routers.vscode.tls=true"
+     - "traefik.http.routers.vscode.tls.certresolver=letsencrypt"
+     - "traefik.http.services.vscode.loadbalancer.server.port=8444"
+     - 'traefik.http.routers.vscode.middlewares=authelia@docker'
+     - 'traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https,wss'
+     # Watchtower Update
+     - "com.centurylinklabs.watchtower.enable=true"
