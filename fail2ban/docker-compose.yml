@@ -1,0 +1,19 @@
+version: "3.5"
+
+services:
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - "./data:/data"
+      - "../traefik/authelia/log:/var/log/authelia:ro"
+      - "../vaultwarden/data/vaultwarden.log:/var/log/vaultwarden/vaultwarden.log:ro"
+      - "../homeassistant/data/homeassistant/home-assistant.log:/var/log/homeassistant.log:ro"
+      - "/var/log/auth.log:/var/log/auth.log:ro"
+    restart: unless-stopped
+    environment:
+      - "TZ=Europe/Lisbon"
